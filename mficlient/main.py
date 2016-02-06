@@ -7,6 +7,10 @@ from mficlient import client
 
 class Application(object):
     def main(self):
+        try:
+            requests.packages.urllib3.disable_warnings()
+        except:
+            pass
         commands = [x[4:] for x in dir(self) if x.startswith('cmd')]
         command_list = os.linesep + os.linesep.join(commands)
 
@@ -41,34 +45,34 @@ class Application(object):
             time.sleep(args.every)
 
     def cmd_dump_sensors(self, options):
-        data = self._client.get_sensors()
+        devices = self._client.get_devices()
 
-        fmt = '%20s | %20s | %10s | %10s | %s'
+        fmt = '%20s | %20s | %15s | %10s | %s'
         print(fmt % ('Model', 'Label', 'Tag', 'Value', 'Extra'))
         print('-' * 78)
-        for sensor in data:
-            print(fmt % (sensor['model'], sensor['label'],
-                         sensor.get('tag'), sensor.get('val'),
-                         sensor.get('output')))
+        for device in devices:
+            for port in device.ports.values():
+                print(fmt % (port.model, port.label,
+                             port.tag, port.value,
+                             port.output))
 
     def cmd_raw_sensors(self, options):
-        data = self._client.get_sensors()
+        data = self._client.get_raw_sensors()
         pprint.pprint(data)
 
     def cmd_raw_status(self, options):
-        data = self._client.get_stat()
+        data = self._client.get_raw_status()
         pprint.pprint(data)
 
-    def cmd_raw_device(self, options):
+    def cmd_raw_sensor(self, options):
         if not options.device:
             print('Must specify a device')
             return
-        try:
-            data = self._client.get_device(options.device)
-        except DeviceNotFound as e:
-            print('Error: %s' % e)
-            return
-        pprint.pprint(data)
+        data = self._client.get_raw_sensors()
+        for sensor in data:
+            if data['label'] == options.device:
+                pprint.pprint(data)
+                return
 
     def cmd_control_device(self, options):
         if not options.device:
@@ -77,22 +81,22 @@ class Application(object):
         if not options.state:
             print('Must specify a state')
             return
-        try:
-            self._client.control_device(options.device,
-                                        options.state == 'on')
-        except DeviceNotFound as e:
-            print('Error: %s' % e)
-            return
+        port = self._client.get_port(label=options.device)
+        port.control(options.state == 'on')
 
     def cmd_get_data(self, options):
         if not options.device:
             print('Must specify a device')
             return
-        try:
-            data = self._client.get_device_data(options.device,
-                                                options.since)
-        except DeviceNotFound as e:
-            print('Error: %s' % e)
+
+        devices = self._client.get_devices()
+        port = None
+        for dev in devices:
+            for port in dev.ports:
+                if port.label == options.device:
+                    break
+        if port is None:
+            print('No such port %s' % options.device)
             return
 
         if options.column_headers:
@@ -108,7 +112,7 @@ class Application(object):
         if not options.device:
             print('Must specify a device')
             return
-        sensors = self._client.get_sensors()
+        sensors = self._client.get_raw_sensors()
         keys = ['active_pwr', 'energy_sum', 'i_rms', 'v_rms',
                 'label', 'model', 'output', 'output_val', 'pf',
                 'port', 'tag', 'val', 'wattHours', 'wattHoursBase']

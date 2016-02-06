@@ -25,6 +25,80 @@ class DeviceNotFound(Exception):
     pass
 
 
+class Device(object):
+    def __init__(self, client, ident):
+        self._client = client
+        self.ident = ident
+        self._devinfo = {}
+        self._ports = {}
+
+    def refresh(self, info=None):
+        if info is None:
+            info = self._client._find_device(ident=self.ident)
+        self._devinfo = info
+
+    def set_port(self, port):
+        self._ports[port.ident] = port
+
+    @property
+    def ports(self):
+        return self._ports
+
+    @property
+    def data(self):
+        return self._devinfo
+
+
+class Port(object):
+    def __init__(self, client, ident):
+        self._client = client
+        self.ident = ident
+        self._portinfo = {}
+
+    def refresh(self, info=None):
+        if info is None:
+            info = self._client._find_port(ident=self.ident)
+        self._portinfo.update(info)
+
+    def __repr__(self):
+        try:
+            data = '%s=%s' % (self.tag, self.value)
+        except ValueError:
+            data = '?'
+        return '<Port %s %s>' % (self.ident, data)
+
+    @property
+    def value(self):
+        if 'tag' not in self._portinfo:
+            raise ValueError('Port has no value')
+        return self._portinfo.get(self.tag)
+
+    @property
+    def tag(self):
+        if 'tag' not in self._portinfo:
+            raise ValueError('Port is not initialized')
+        return self._portinfo['tag']
+
+    @property
+    def data(self):
+        return self._portinfo
+
+    @property
+    def label(self):
+        return self._portinfo['label']
+
+    @property
+    def model(self):
+        return self._portinfo['model']
+
+    @property
+    def output(self):
+        return self._portinfo.get('output')
+
+    def control(self, state):
+        self._client._control_port(self.ident, state)
+
+
 class MFiClient(object):
     def __init__(self, host, username, password, port=6443):
         self._host = host
@@ -55,20 +129,62 @@ class MFiClient(object):
         response = self._session.get('%s/api/v1.0/stat/device' % self._baseurl)
         return response.json()['data']
 
+    def _get_sensors(self):
+        data = {'json': json.dumps({'hello': 2})}
+        response = self._session.post(
+            '%s/api/v1.0/list/sensors' % self._baseurl, data=data)
+        return response.json()['data']
+
+    get_raw_sensors = _get_sensors
+    get_raw_status = _get_stat
+
+    @staticmethod
+    def _find_sensor(sensors, ident):
+        for sensor in sensors:
+            if sensor['_id'] == ident:
+                return sensor
+        raise DeviceNotFound('No sensor %s' % ident)
+
+    def get_devices(self):
+        stat = self._get_stat()
+        sensors = self._get_sensors()
+
+        devices = []
+        for devinfo in stat:
+            device = Device(self, devinfo['_id'])
+            for portinfo in devinfo['port_cfg']:
+                if portinfo['_id'] == 'NONE':
+                    continue
+                sensorinfo = self._find_sensor(sensors, portinfo['_id'])
+
+                port = Port(self, portinfo['_id'])
+                port.refresh(portinfo)
+                port.refresh(sensorinfo)
+                device.set_port(port)
+            devices.append(device)
+        return devices
+
+    def get_port(self, ident=None, label=None):
+        for device in self.get_devices():
+            for port in device.ports.values():
+                if port.label == label or port.ident == ident:
+                    return port
+        return None
+
     def get_stat(self):
         if not self._stat_cache:
             self._stat_cache = self._get_stat()
         return self._stat_cache
 
-    def control_device(self, device_name, state):
-        the_port = self._find_device(device_name)
+    def _control_port(self, ident, state, voltage=0):
+        the_port = self._find_port(ident=ident)
 
         if (the_port['model'].startswith('Output') and
                 '12' in the_port['model']):
             voltage = state and 12 or 0
 
         data = {
-            'sId': the_port['_id'],
+            'sId': ident,
             'mac': the_port['mac'],
             'model': the_port['model'],
             'port': int(the_port['port']),
@@ -81,27 +197,19 @@ class MFiClient(object):
                                       data=data)
         return response.text
 
-    def _find_device(self, device_name):
+    def _find_port(self, ident=None, device_name=None):
         devices = self.get_stat()
 
         for dev in devices:
             for port in dev['port_cfg']:
+                if port['_id'] == ident:
+                    return port
                 if port['label'] == device_name:
                     return port
-        raise DeviceNotFound('No such device `%s\'' % device_name)
-
-    def _find_sensor(self, device_name):
-        sensors = self.get_sensors()
-
-        for sensor in sensors:
-            if sensor['label'] == device_name:
-                return sensor
-        raise DeviceNotFound('No such device `%s\'' % device_name)
-
-    def get_device(self, device):
-        return self._find_device(device)
+        raise DeviceNotFound('No such device')
 
     def get_device_data(self, device, since=60):
+        # NOTE: This is broken
         port = self._find_device(device)
         sensor = self._find_sensor(device)
 
@@ -121,14 +229,6 @@ class MFiClient(object):
             '%s/api/v1.0/data/m2mgeneric_by_id' % self._baseurl,
             params=data)
         return response.json()['data'][0]['%s.0' % sensor['tag']]
-
-    def get_sensors(self):
-        data = {
-            'json': json.dumps({'hello': 2}),
-        }
-        response = self._session.post(
-            '%s/api/v1.0/list/sensors' % self._baseurl, data=data)
-        return response.json()['data']
 
 
 def get_auth_from_env():
@@ -173,3 +273,8 @@ def get_auth_from_env():
         _pass = os.getenv('MFI_PASS')
         path = '/'
     return host, port, user, _pass, path
+
+
+def envclient():
+    host, port, user, _pass, path = get_auth_from_env()
+    return MFiClient(host, user, _pass, port=port)
