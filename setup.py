@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='mficlient',
-      version='0.2',
+      version='0.2.1',
       description='A remote control client for Ubiquiti\'s mFi system',
       author='Dan Smith',
       author_email='dsmith+mficlient@danplanet.com',

@@ -57,7 +57,8 @@ class Port(object):
 
     def refresh(self, info=None):
         if info is None:
-            info = self._client._find_port(ident=self.ident)
+            sensors = self._client._get_sensors()
+            info = self._client._find_sensor(sensors, self.ident)
         self._portinfo.update(info)
 
     def __repr__(self):
