@@ -180,9 +180,12 @@ class MFiClient(object):
     def _control_port(self, ident, state, voltage=0):
         the_port = self._find_port(ident=ident)
 
-        if (the_port['model'].startswith('Output') and
-                '12' in the_port['model']):
-            voltage = state and 12 or 0
+        voltages = {
+            'Output 5v': 5,
+            'Output 12v': 12,
+            'Output 24v': 24,
+        }
+        voltage = state and voltages.get(the_port['model'], 0) or 0
 
         data = {
             'sId': ident,
