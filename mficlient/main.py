@@ -19,6 +19,8 @@ class Application(object):
                             help='One of: %s' % command_list)
         parser.add_argument('--device',
                             help='Specific device')
+        parser.add_argument('--property',
+                            help='Show only this property of a device')
         parser.add_argument('--state',
                             help='State to set (on or off)')
         parser.add_argument('--every', type=int, default=0,
@@ -58,6 +60,8 @@ class Application(object):
 
     def cmd_raw_sensors(self, options):
         data = self._client.get_raw_sensors()
+        if options.device:
+            data = [x for x in data if x['label'] == options.device]
         pprint.pprint(data)
 
     def cmd_raw_status(self, options):
@@ -92,21 +96,25 @@ class Application(object):
         devices = self._client.get_devices()
         port = None
         for dev in devices:
-            for port in dev.ports:
+            for port in dev.ports.values():
                 if port.label == options.device:
                     break
         if port is None:
             print('No such port %s' % options.device)
             return
 
-        if options.column_headers:
-            print('time,min,max')
+        headers = list(port.data.keys())
+        if options.property:
+            if options.property not in headers:
+                print('Port has no property `%s`' % options.property)
+                return
+            headers = [options.property]
 
-        for sample in data:
-            dt = datetime.datetime.fromtimestamp(sample['time'] / 1000)
-            print('%s,%s,%s' % (dt.strftime(TIME_FORMAT),
-                                sample['min'],
-                                sample['max']))
+        data = [str(port.data[key]) for key in headers]
+
+        if options.column_headers:
+            print(','.join(headers))
+        print(','.join(data))
 
     def cmd_sensors_csv(self, options):
         if not options.device:
