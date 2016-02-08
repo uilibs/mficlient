@@ -1,6 +1,7 @@
 import argparse
 import os
 import pprint
+import requests
 
 from mficlient import client
 
