@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import pprint
 import requests
@@ -32,6 +33,9 @@ class Application(object):
         parser.add_argument('--column-headers', default=False,
                             action='store_true',
                             help='Show CSV column headers')
+        parser.add_argument('--json', default=False,
+                            action='store_true',
+                            help='Output raw JSON for the raw_ commands')
         args = parser.parse_args()
 
         if not hasattr(self, 'cmd_%s' % args.command):
@@ -63,21 +67,17 @@ class Application(object):
         data = self._client.get_raw_sensors()
         if options.device:
             data = [x for x in data if x['label'] == options.device]
-        pprint.pprint(data)
+        if options.json:
+            print(json.dumps(data))
+        else:
+            pprint.pprint(data)
 
     def cmd_raw_status(self, options):
         data = self._client.get_raw_status()
-        pprint.pprint(data)
-
-    def cmd_raw_sensor(self, options):
-        if not options.device:
-            print('Must specify a device')
-            return
-        data = self._client.get_raw_sensors()
-        for sensor in data:
-            if data['label'] == options.device:
-                pprint.pprint(data)
-                return
+        if options.json:
+            print(json.dumps(data))
+        else:
+            pprint.pprint(data)
 
     def cmd_control_device(self, options):
         if not options.device:
