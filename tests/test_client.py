@@ -91,23 +91,27 @@ class TestClientRequests(unittest.TestCase):
                 data=weirdo)
             self.assertEqual('foo', result)
 
-    def test_control_device(self):
+    def _test_control_device(self, expected_data=None, model=None):
         with mock.patch.object(client.MFiClient, '_login'):
             c = client.MFiClient('host', 'user', 'pass')
+        if not model:
+            model = 'model'
         data = {
             'sId': 'ident',
             'mac': 'mac',
-            'model': 'model',
+            'model': model,
             'port': 1,
             'cmd': 'mfi-output',
             'val': 1,
             'volt': 0,
         }
+        if expected_data:
+            data.update(expected_data)
         data = {'json': json.dumps(data)}
         with mock.patch.object(c, '_session') as mock_session:
             with mock.patch.object(c, '_find_port') as mock_fp:
                 mock_fp.return_value = {'mac': 'mac',
-                                        'model': 'model',
+                                        'model': model,
                                         'port': '1'}
                 mock_session.post.return_value.text = 'foo'
                 result = c._control_port('ident', True)
@@ -115,3 +119,18 @@ class TestClientRequests(unittest.TestCase):
                     'https://host:6443/api/v1.0/cmd/devmgr',
                     data=data)
                 self.assertEqual('foo', result)
+
+    def test_control_device_generic(self):
+        self._test_control_device()
+
+    def test_control_device_5v(self):
+        self._test_control_device(expected_data={'volt': 5},
+                                  model='Output 5v')
+
+    def test_control_device_12v(self):
+        self._test_control_device(expected_data={'volt': 12},
+                                  model='Output 12v')
+
+    def test_control_device_24v(self):
+        self._test_control_device(expected_data={'volt': 24},
+                                  model='Output 24v')
