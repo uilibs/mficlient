@@ -1,6 +1,9 @@
 Client for Ubiquiti's mFi system
 ================================
 
+.. image:: https://travis-ci.org/kk7ds/mficlient.svg?branch=master
+    :target: https://travis-ci.org/kk7ds/mficlient
+
 The APIs in this library (and tool) should not be considered stable!
 
 To install:
