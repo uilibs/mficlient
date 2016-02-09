@@ -8,6 +8,6 @@ python:
   - "3.5-dev" # 3.5 development branch
   - "nightly" # currently points to 3.6-dev
 # command to install dependencies
-install: "pip install nose mock"
+install: "pip install nose mock requests"
 # command to run tests
 script: nosetests
