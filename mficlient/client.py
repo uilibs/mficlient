@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import functools
 import json
 import os
 import pprint
@@ -22,6 +23,10 @@ class FailedToLogin(Exception):
 
 
 class DeviceNotFound(Exception):
+    pass
+
+
+class RequestFailed(Exception):
     pass
 
 
@@ -100,6 +105,22 @@ class Port(object):
         self._client._control_port(self.ident, state)
 
 
+def retries_login(fn):
+    @functools.wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        for i in (0, 1):
+            try:
+                return fn(self, *args, **kwargs)
+            except RequestFailed:
+                if i == 0:
+                    self._login()
+                else:
+                    # Make sure we raise the original exception
+                    # if we retried login already and still explode
+                    raise
+    return wrapper
+
+
 class MFiClient(object):
     def __init__(self, host, username, password, port=6443):
         self._host = host
@@ -126,15 +147,21 @@ class MFiClient(object):
 
         raise FailedToLogin('Server rejected login')
 
+    @retries_login
     def _get_stat(self):
         response = self._session.get('%s/api/v1.0/stat/device' % self._baseurl)
-        return response.json()['data']
+        if response.status_code == 200:
+            return response.json()['data']
+        raise RequestFailed()
 
+    @retries_login
     def _get_sensors(self):
         data = {'json': json.dumps({'hello': 2})}
         response = self._session.post(
             '%s/api/v1.0/list/sensors' % self._baseurl, data=data)
-        return response.json()['data']
+        if response.status_code == 200:
+            return response.json()['data']
+        raise RequestFailed()
 
     get_raw_sensors = _get_sensors
     get_raw_status = _get_stat
@@ -177,6 +204,7 @@ class MFiClient(object):
             self._stat_cache = self._get_stat()
         return self._stat_cache
 
+    @retries_login
     def _control_port(self, ident, state, voltage=0):
         the_port = self._find_port(ident=ident)
 
@@ -199,7 +227,9 @@ class MFiClient(object):
         data = {'json': json.dumps(data)}
         response = self._session.post('%s/api/v1.0/cmd/devmgr' % self._baseurl,
                                       data=data)
-        return response.text
+        if response.status_code == 200:
+            return response.text
+        raise RequestFailed()
 
     def _find_port(self, ident=None, device_name=None):
         devices = self.get_stat()

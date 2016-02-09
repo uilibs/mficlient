@@ -73,6 +73,7 @@ class TestClientRequests(unittest.TestCase):
         with mock.patch.object(client.MFiClient, '_login'):
             c = client.MFiClient('host', 'user', 'pass')
         with mock.patch.object(c, '_session') as mock_session:
+            mock_session.get.return_value.status_code = 200
             mock_session.get.return_value.json.return_value = {'data': 'foo'}
             result = c._get_stat()
             mock_session.get.assert_called_once_with(
@@ -84,6 +85,7 @@ class TestClientRequests(unittest.TestCase):
             c = client.MFiClient('host', 'user', 'pass')
         weirdo = {'json': json.dumps({'hello': 2})}
         with mock.patch.object(c, '_session') as mock_session:
+            mock_session.post.return_value.status_code = 200
             mock_session.post.return_value.json.return_value = {'data': 'foo'}
             result = c._get_sensors()
             mock_session.post.assert_called_once_with(
@@ -91,7 +93,8 @@ class TestClientRequests(unittest.TestCase):
                 data=weirdo)
             self.assertEqual('foo', result)
 
-    def _test_control_device(self, expected_data=None, model=None):
+    def _test_control_device(self, expected_data=None, model=None,
+                             status=200):
         with mock.patch.object(client.MFiClient, '_login'):
             c = client.MFiClient('host', 'user', 'pass')
         if not model:
@@ -113,6 +116,7 @@ class TestClientRequests(unittest.TestCase):
                 mock_fp.return_value = {'mac': 'mac',
                                         'model': model,
                                         'port': '1'}
+                mock_session.post.return_value.status_code = status
                 mock_session.post.return_value.text = 'foo'
                 result = c._control_port('ident', True)
                 mock_session.post.assert_called_once_with(
@@ -134,3 +138,27 @@ class TestClientRequests(unittest.TestCase):
     def test_control_device_24v(self):
         self._test_control_device(expected_data={'volt': 24},
                                   model='Output 24v')
+
+    @mock.patch('requests.Session')
+    def test_get_stat_retries_login(self, mock_session):
+        session = mock_session.return_value
+        with mock.patch.object(client.MFiClient, '_login'):
+            c = client.MFiClient('host', 'user', 'pass')
+        with mock.patch.object(client.MFiClient, '_login') as login:
+            session.get.return_value.status_code = 302
+            self.assertRaises(client.RequestFailed, c._get_stat)
+            login.assert_called_once_with()
+
+    @mock.patch('requests.Session')
+    def test_get_sensors_retries_login(self, mock_session):
+        session = mock_session.return_value
+        with mock.patch.object(client.MFiClient, '_login'):
+            c = client.MFiClient('host', 'user', 'pass')
+        with mock.patch.object(client.MFiClient, '_login') as login:
+            session.post.return_value.status_code = 302
+            self.assertRaises(client.RequestFailed, c._get_stat)
+            login.assert_called_once_with()
+
+    def test_control_device_retries_login(self):
+        self.assertRaises(client.FailedToLogin,
+                          self._test_control_device, status=302)
