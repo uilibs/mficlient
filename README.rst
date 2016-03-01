@@ -12,7 +12,7 @@ To install::
 
 To get started, set your connection information like this::
 
- $ export MFI="http://user:password@192.168.1.123:6443"
+ $ export MFI="https://user:password@192.168.1.123:6443"
 
 Then you can run the client, doing something like::
 
