@@ -36,14 +36,18 @@ class Application(object):
         parser.add_argument('--json', default=False,
                             action='store_true',
                             help='Output raw JSON for the raw_ commands')
+        parser.add_argument('--noverify', default=False,
+                            action='store_true',
+                            help='Do not verify server SSL certificate')
         args = parser.parse_args()
 
         if not hasattr(self, 'cmd_%s' % args.command):
             print('No such command `%s\'' % args.command)
             return 1
 
-        host, port, user, _pass, path, = client.get_auth_from_env()
-        self._client = client.MFiClient(host, user, _pass, port=port)
+        host, port, user, _pass, path, tls = client.get_auth_from_env()
+        self._client = client.MFiClient(host, user, _pass, port=port,
+                                        use_tls=tls, verify=not args.noverify)
 
         while True:
             getattr(self, 'cmd_%s' % args.command)(args)

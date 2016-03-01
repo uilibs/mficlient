@@ -54,11 +54,12 @@ class TestClientRequests(unittest.TestCase):
         c._login()
         mock_session.assert_called_once_with()
         url = 'https://host:6443'
-        session.get.assert_called_once_with(url, verify=False)
+        session.get.assert_called_once_with(url, verify=True)
         data = {'username': 'user',
                 'password': 'pass',
                 'login': 'Login'}
-        session.post.assert_called_once_with(url + '/login', data=data)
+        session.post.assert_called_once_with(url + '/login', data=data,
+                                             verify=True)
 
     @mock.patch('requests.Session')
     def test_login_fail(self, mock_session):
@@ -77,7 +78,8 @@ class TestClientRequests(unittest.TestCase):
             mock_session.get.return_value.json.return_value = {'data': 'foo'}
             result = c._get_stat()
             mock_session.get.assert_called_once_with(
-                'https://host:6443/api/v1.0/stat/device')
+                'https://host:6443/api/v1.0/stat/device',
+                verify=True)
             self.assertEqual('foo', result)
 
     def test_get_sensors(self):
@@ -90,7 +92,7 @@ class TestClientRequests(unittest.TestCase):
             result = c._get_sensors()
             mock_session.post.assert_called_once_with(
                 'https://host:6443/api/v1.0/list/sensors',
-                data=weirdo)
+                data=weirdo, verify=True)
             self.assertEqual('foo', result)
 
     def _test_control_device(self, expected_data=None, model=None,
@@ -121,7 +123,7 @@ class TestClientRequests(unittest.TestCase):
                 result = c._control_port('ident', True)
                 mock_session.post.assert_called_once_with(
                     'https://host:6443/api/v1.0/cmd/devmgr',
-                    data=data)
+                    data=data, verify=True)
                 self.assertEqual('foo', result)
 
     def test_control_device_generic(self):

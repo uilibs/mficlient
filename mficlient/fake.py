@@ -23,7 +23,7 @@ class FakeSession(object):
         self._status = json.loads(fake_data.FAKE_STATUS)
         self._sensors = json.loads(fake_data.FAKE_SENSORS)
 
-    def get(self, url, headers=None):
+    def get(self, url, headers=None, verify=True):
         if url.endswith('stat/device'):
             return FakeResponse(200, self._status)
         elif url.endswith('list/sensors'):
@@ -41,7 +41,7 @@ class FakeSession(object):
             sensor['output'] = float(sensor['val'] > 0)
         return FakeResponse(200, self._sensors)
 
-    def post(self, url, data=None, headers=None):
+    def post(self, url, data=None, headers=None, verify=True):
         if url.endswith('list/sensors'):
             return FakeResponse(200, self._sensors)
         elif url.endswith('cmd/devmgr'):

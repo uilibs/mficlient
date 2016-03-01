@@ -122,7 +122,8 @@ def retries_login(fn):
 
 
 class MFiClient(object):
-    def __init__(self, host, username, password, port=6443):
+    def __init__(self, host, username, password, port=None,
+                 use_tls=True, verify=True):
         self._host = host
         self._port = port
         self._user = username
@@ -130,18 +131,25 @@ class MFiClient(object):
         self._stat_cache = None
         self._cookie = None
         self._session = requests.Session()
-        self._baseurl = 'https://%s:%i' % (host, port)
+        self._verify = verify
+        if use_tls:
+            port = port or 6443
+            self._baseurl = 'https://%s:%i' % (host, port)
+        else:
+            port = port or 6080
+            self._baseurl = 'http://%s:%i' % (host, port)
+
         self._login()
 
     def _login(self):
-        response = self._session.get(self._baseurl, verify=False)
+        response = self._session.get(self._baseurl, verify=self._verify)
 
         data = {'username': self._user,
                 'password': self._pass,
                 'login': 'Login'}
 
         response = self._session.post('%s/login' % self._baseurl,
-                                      data=data)
+                                      data=data, verify=self._verify)
         if response.status_code == 200 and response.url.endswith('/manage'):
             return
 
@@ -149,7 +157,8 @@ class MFiClient(object):
 
     @retries_login
     def _get_stat(self):
-        response = self._session.get('%s/api/v1.0/stat/device' % self._baseurl)
+        response = self._session.get('%s/api/v1.0/stat/device' % self._baseurl,
+                                     verify=self._verify)
         if response.status_code == 200:
             return response.json()['data']
         raise RequestFailed()
@@ -158,7 +167,8 @@ class MFiClient(object):
     def _get_sensors(self):
         data = {'json': json.dumps({'hello': 2})}
         response = self._session.post(
-            '%s/api/v1.0/list/sensors' % self._baseurl, data=data)
+            '%s/api/v1.0/list/sensors' % self._baseurl, data=data,
+            verify=self._verify)
         if response.status_code == 200:
             return response.json()['data']
         raise RequestFailed()
@@ -226,7 +236,7 @@ class MFiClient(object):
         }
         data = {'json': json.dumps(data)}
         response = self._session.post('%s/api/v1.0/cmd/devmgr' % self._baseurl,
-                                      data=data)
+                                      data=data, verify=self._verify)
         if response.status_code == 200:
             return response.text
         raise RequestFailed()
@@ -261,7 +271,7 @@ class MFiClient(object):
         }
         response = self._session.get(
             '%s/api/v1.0/data/m2mgeneric_by_id' % self._baseurl,
-            params=data)
+            params=data, verify=self._verify)
         return response.json()['data'][0]['%s.0' % sensor['tag']]
 
 
@@ -270,7 +280,7 @@ def get_auth_from_env():
 
     Supports either a combined variable called MFI formatted like:
 
-        MFI="http://user:pass@192.168.1.1:7080/
+        MFI="http://user:pass@192.168.1.1:6080/
 
     or individual ones like:
 
@@ -300,13 +310,15 @@ def get_auth_from_env():
             host = netloc
             port = 6080
         path = result.path
+        tls = combined.startswith('https://')
     else:
         host = os.getenv('MFI_HOST')
         port = int(os.getenv('MFI_PORT', 7080))
         user = os.getenv('MFI_USER')
         _pass = os.getenv('MFI_PASS')
         path = '/'
-    return host, port, user, _pass, path
+        tls = False
+    return host, port, user, _pass, path, tls
 
 
 def envclient():
