@@ -6,7 +6,7 @@ Client for Ubiquiti's mFi system
 
 The APIs in this library (and tool) should not be considered stable!
 
-To install:
+To install::
 
  $ pip install mficlient
 
@@ -14,7 +14,7 @@ To get started, set your connection information like this::
 
  $ export MFI="http://user:password@192.168.1.123:6443"
 
-Then you can run the client, doing something like:
+Then you can run the client, doing something like::
 
  $ mfi dump_sensors
                 Model |                Label |        Tag  |      Value | Extra
