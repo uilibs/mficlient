@@ -1,10 +1,9 @@
 import json
 
-from mficlient import client
-from mficlient import fake_data
+from mficlient import client, fake_data
 
 
-class FakeResponse(object):
+class FakeResponse:
     def __init__(self, code, data):
         self.status_code = code
         self._data = data
@@ -17,7 +16,7 @@ class FakeResponse(object):
         return self._data
 
 
-class FakeSession(object):
+class FakeSession:
     def __init__(self):
         self._status = json.loads(fake_data.FAKE_STATUS)
         self._sensors = json.loads(fake_data.FAKE_SENSORS)
@@ -51,7 +50,7 @@ class FakeMFiClient(client.MFiClient):
     def __init__(self, *args, **kwargs):
         if not args:
             args = ("fakehost", "fakeuser", "fakepass")
-        super(FakeMFiClient, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._session = FakeSession()
 
     def _login(self):

@@ -11,7 +11,7 @@ from mficlient import client
 from mficlient.client import TIME_FORMAT
 
 
-class Application(object):
+class Application:
     def main(self):
         try:
             requests.packages.urllib3.disable_warnings()
