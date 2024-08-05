@@ -1,0 +1,132 @@
+[tool.poetry]
+name = "mficlient"
+version = "0.3.0"
+description = "A remote control client for Ubiquiti's UVC NVR"
+authors = ["Dan Smith <dsmith+mficlient@danplanet.com>"]
+readme = "README.rst"
+repository = "https://github.com/uilibs/mficlient"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Build Tools",
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+packages = [
+    { include = "mficlient", from = "src" },
+]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/uilibs/mficlient/issues"
+"Changelog" = "https://github.com/uilibs/mficlient/blob/main/CHANGELOG.md"
+
+[tool.poetry.scripts]
+mfi = "mfi:main"
+
+[tool.poetry.dependencies]
+python = ">=3.10"
+requests = "^2.26.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=7,<9"
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:tool.poetry.version"]
+version_variables = [
+    "src/mficlient/__init__.py:__version__",
+]
+build_command = "pip install poetry && poetry build"
+
+[tool.semantic_release.changelog]
+exclude_commit_patterns = [
+    "chore*",
+    "ci*",
+]
+
+[tool.semantic_release.changelog.environment]
+keep_trailing_newline = true
+
+[tool.semantic_release.branches.main]
+match = "main"
+
+[tool.semantic_release.branches.noop]
+match = "(?!main$)"
+prerelease = true
+
+[tool.pytest.ini_options]
+addopts = "-v -Wdefault --cov=mficlient --cov-report=term-missing:skip-covered -n=auto"
+pythonpath = ["src"]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "@overload",
+    "if TYPE_CHECKING",
+    "raise NotImplementedError",
+    'if __name__ == "__main__":',
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+
+[tool.ruff.lint]
+ignore = [
+    "S101", # use of assert
+    "D203", # 1 blank line required before class docstring
+    "D212", # Multi-line docstring summary should start at the first line
+    "D100", # Missing docstring in public module
+    "D101", # Missing docstring in public module
+    "D102", # Missing docstring in public method
+    "D103", # Missing docstring in public module
+    "D104", # Missing docstring in public package
+    "D105", # Missing docstring in magic method
+    "D107", # Missing docstring in `__init__`
+    "D400", # First line should end with a period
+    "D401", # First line of docstring should be in imperative mood
+    "D205", # 1 blank line required between summary line and description
+    "D415", # First line should end with a period, question mark, or exclamation point
+    "D417", # Missing argument descriptions in the docstring
+    "E501", # Line too long
+    "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
+    "B008", # Do not perform function call
+    "S110", # `try`-`except`-`pass` detected, consider logging the exception
+    "D106", # Missing docstring in public nested class
+    "UP031",
+    "B904",
+    "UP007", # typer needs Optional syntax
+    "UP038", # Use `X | Y` in `isinstance` is slower
+    "S603", #  check for execution of untrusted input
+]
+select = [
+    "B",   # flake8-bugbear
+    "D",   # flake8-docstrings
+    "C4",  # flake8-comprehensions
+    "S",   # flake8-bandit
+    "F",   # pyflake
+    "E",   # pycodestyle
+    "W",   # pycodestyle
+    "UP",  # pyupgrade
+    "I",   # isort
+    "RUF", # ruff specific
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = [
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "S101",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["mficlient", "tests"]

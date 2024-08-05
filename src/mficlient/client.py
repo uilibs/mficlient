@@ -1,8 +1,9 @@
 import functools
 import json
 import os
-import requests
 import time
+
+import requests
 
 try:
     import urlparse
@@ -25,7 +26,7 @@ class RequestFailed(Exception):
     pass
 
 
-class Device(object):
+class Device:
     def __init__(self, client, ident):
         self._client = client
         self.ident = ident
@@ -49,7 +50,7 @@ class Device(object):
         return self._devinfo
 
 
-class Port(object):
+class Port:
     def __init__(self, client, ident):
         self._client = client
         self.ident = ident
@@ -117,7 +118,7 @@ def retries_login(fn):
     return wrapper
 
 
-class MFiClient(object):
+class MFiClient:
     def __init__(self, host, username, password, port=None, use_tls=True, verify=True):
         self._host = host
         self._port = port
@@ -274,7 +275,8 @@ class MFiClient(object):
 
 
 def get_auth_from_env():
-    """Attempt to get mFi connection information from the environment.
+    """
+    Attempt to get mFi connection information from the environment.
 
     Supports either a combined variable called MFI formatted like:
 
@@ -289,7 +291,6 @@ def get_auth_from_env():
 
     :returns: A tuple like (host, port, user, pass, path)
     """
-
     combined = os.getenv("MFI")
     if combined:
         # http://user:pass@192.168.1.1:7080/
@@ -300,7 +301,7 @@ def get_auth_from_env():
             user, _pass = creds.split(":", 1)
         else:
             user = "mfiadmin"
-            _pass = "password"
+            _pass = "password"  # noqa: S105
         if ":" in netloc:
             host, port = netloc.split(":", 1)
             port = int(port)

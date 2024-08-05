@@ -1,10 +1,8 @@
 import json
 import unittest
+from unittest import mock
 
-import mock
-
-from mficlient import client
-from mficlient import fake
+from mficlient import client, fake
 
 
 class TestMFiClientWithFakeData(unittest.TestCase):
