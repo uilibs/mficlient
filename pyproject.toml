@@ -33,6 +33,12 @@ requests = "^2.26.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7,<9"
+pytest-asyncio = "0.23.7"
+pytest-benchmark = "4.0.0"
+pytest-sugar = "1.0.0"
+pytest-timeout = "2.3.1"
+pytest-xdist = "3.6.1"
+pytest-cov = "^5.0.0"
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:tool.poetry.version"]
