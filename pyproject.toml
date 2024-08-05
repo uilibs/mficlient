@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mficlient"
-version = "0.3.0"
+version = "0.0.0"
 description = "A remote control client for Ubiquiti's UVC NVR"
 authors = ["Dan Smith <dsmith+mficlient@danplanet.com>"]
 readme = "README.rst"
