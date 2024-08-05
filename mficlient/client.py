@@ -1,12 +1,7 @@
-import argparse
-import datetime
 import functools
 import json
 import os
-import pprint
-import urllib
 import requests
-import sys
 import time
 
 try:
@@ -68,22 +63,22 @@ class Port(object):
 
     def __repr__(self):
         try:
-            data = '%s=%s' % (self.tag, self.value)
+            data = "%s=%s" % (self.tag, self.value)
         except ValueError:
-            data = '?'
-        return '<Port %s %s>' % (self.ident, data)
+            data = "?"
+        return "<Port %s %s>" % (self.ident, data)
 
     @property
     def value(self):
-        if 'tag' not in self._portinfo:
-            raise ValueError('Port has no value')
+        if "tag" not in self._portinfo:
+            raise ValueError("Port has no value")
         return self._portinfo.get(self.tag)
 
     @property
     def tag(self):
-        if 'tag' not in self._portinfo:
-            raise ValueError('Port is not initialized')
-        return self._portinfo['tag']
+        if "tag" not in self._portinfo:
+            raise ValueError("Port is not initialized")
+        return self._portinfo["tag"]
 
     @property
     def data(self):
@@ -91,15 +86,15 @@ class Port(object):
 
     @property
     def label(self):
-        return self._portinfo['label']
+        return self._portinfo["label"]
 
     @property
     def model(self):
-        return self._portinfo['model']
+        return self._portinfo["model"]
 
     @property
     def output(self):
-        return self._portinfo.get('output')
+        return self._portinfo.get("output")
 
     def control(self, state):
         self._client._control_port(self.ident, state)
@@ -118,12 +113,12 @@ def retries_login(fn):
                     # Make sure we raise the original exception
                     # if we retried login already and still explode
                     raise
+
     return wrapper
 
 
 class MFiClient(object):
-    def __init__(self, host, username, password, port=None,
-                 use_tls=True, verify=True):
+    def __init__(self, host, username, password, port=None, use_tls=True, verify=True):
         self._host = host
         self._port = port
         self._user = username
@@ -134,43 +129,43 @@ class MFiClient(object):
         self._verify = verify
         if use_tls:
             port = port or 6443
-            self._baseurl = 'https://%s:%i' % (host, port)
+            self._baseurl = "https://%s:%i" % (host, port)
         else:
             port = port or 6080
-            self._baseurl = 'http://%s:%i' % (host, port)
+            self._baseurl = "http://%s:%i" % (host, port)
 
         self._login()
 
     def _login(self):
         response = self._session.get(self._baseurl, verify=self._verify)
 
-        data = {'username': self._user,
-                'password': self._pass,
-                'login': 'Login'}
+        data = {"username": self._user, "password": self._pass, "login": "Login"}
 
-        response = self._session.post('%s/login' % self._baseurl,
-                                      data=data, verify=self._verify)
-        if response.status_code == 200 and response.url.endswith('/manage'):
+        response = self._session.post(
+            "%s/login" % self._baseurl, data=data, verify=self._verify
+        )
+        if response.status_code == 200 and response.url.endswith("/manage"):
             return
 
-        raise FailedToLogin('Server rejected login')
+        raise FailedToLogin("Server rejected login")
 
     @retries_login
     def _get_stat(self):
-        response = self._session.get('%s/api/v1.0/stat/device' % self._baseurl,
-                                     verify=self._verify)
+        response = self._session.get(
+            "%s/api/v1.0/stat/device" % self._baseurl, verify=self._verify
+        )
         if response.status_code == 200:
-            return response.json()['data']
+            return response.json()["data"]
         raise RequestFailed()
 
     @retries_login
     def _get_sensors(self):
-        data = {'json': json.dumps({'hello': 2})}
+        data = {"json": json.dumps({"hello": 2})}
         response = self._session.post(
-            '%s/api/v1.0/list/sensors' % self._baseurl, data=data,
-            verify=self._verify)
+            "%s/api/v1.0/list/sensors" % self._baseurl, data=data, verify=self._verify
+        )
         if response.status_code == 200:
-            return response.json()['data']
+            return response.json()["data"]
         raise RequestFailed()
 
     get_raw_sensors = _get_sensors
@@ -179,9 +174,9 @@ class MFiClient(object):
     @staticmethod
     def _find_sensor(sensors, ident):
         for sensor in sensors:
-            if sensor['_id'] == ident:
+            if sensor["_id"] == ident:
                 return sensor
-        raise DeviceNotFound('No sensor %s' % ident)
+        raise DeviceNotFound("No sensor %s" % ident)
 
     def get_devices(self):
         stat = self._get_stat()
@@ -189,13 +184,13 @@ class MFiClient(object):
 
         devices = []
         for devinfo in stat:
-            device = Device(self, devinfo['_id'])
-            for portinfo in devinfo['port_cfg']:
-                if portinfo['_id'] == 'NONE':
+            device = Device(self, devinfo["_id"])
+            for portinfo in devinfo["port_cfg"]:
+                if portinfo["_id"] == "NONE":
                     continue
-                sensorinfo = self._find_sensor(sensors, portinfo['_id'])
+                sensorinfo = self._find_sensor(sensors, portinfo["_id"])
 
-                port = Port(self, portinfo['_id'])
+                port = Port(self, portinfo["_id"])
                 port.refresh(portinfo)
                 port.refresh(sensorinfo)
                 device.set_port(port)
@@ -219,24 +214,25 @@ class MFiClient(object):
         the_port = self._find_port(ident=ident)
 
         voltages = {
-            'Output 5v': 5,
-            'Output 12v': 12,
-            'Output 24v': 24,
+            "Output 5v": 5,
+            "Output 12v": 12,
+            "Output 24v": 24,
         }
-        voltage = state and voltages.get(the_port['model'], 0) or 0
+        voltage = state and voltages.get(the_port["model"], 0) or 0
 
         data = {
-            'sId': ident,
-            'mac': the_port['mac'],
-            'model': the_port['model'],
-            'port': int(the_port['port']),
-            'cmd': 'mfi-output',
-            'val': int(state),
-            'volt': voltage,
+            "sId": ident,
+            "mac": the_port["mac"],
+            "model": the_port["model"],
+            "port": int(the_port["port"]),
+            "cmd": "mfi-output",
+            "val": int(state),
+            "volt": voltage,
         }
-        data = {'json': json.dumps(data)}
-        response = self._session.post('%s/api/v1.0/cmd/devmgr' % self._baseurl,
-                                      data=data, verify=self._verify)
+        data = {"json": json.dumps(data)}
+        response = self._session.post(
+            "%s/api/v1.0/cmd/devmgr" % self._baseurl, data=data, verify=self._verify
+        )
         if response.status_code == 200:
             return response.text
         raise RequestFailed()
@@ -245,12 +241,12 @@ class MFiClient(object):
         devices = self.get_stat()
 
         for dev in devices:
-            for port in dev['port_cfg']:
-                if port['_id'] == ident:
+            for port in dev["port_cfg"]:
+                if port["_id"] == ident:
                     return port
-                if port['label'] == device_name:
+                if port["label"] == device_name:
                     return port
-        raise DeviceNotFound('No such device')
+        raise DeviceNotFound("No such device")
 
     def get_device_data(self, device, since=60):
         # NOTE: This is broken
@@ -260,19 +256,21 @@ class MFiClient(object):
         start = time.time() - since
         end = time.time()
         data = {
-            'fmt': 'json',
-            'ids': port['_id'],
-            'tags': sensor['tag'],
-            'indices': '1,2,3,4',
-            'func': 'trend',
-            'collection': 'null',
-            'startTime': int(start) * 1000,
-            'endTime': int(end) * 1000,
+            "fmt": "json",
+            "ids": port["_id"],
+            "tags": sensor["tag"],
+            "indices": "1,2,3,4",
+            "func": "trend",
+            "collection": "null",
+            "startTime": int(start) * 1000,
+            "endTime": int(end) * 1000,
         }
         response = self._session.get(
-            '%s/api/v1.0/data/m2mgeneric_by_id' % self._baseurl,
-            params=data, verify=self._verify)
-        return response.json()['data'][0]['%s.0' % sensor['tag']]
+            "%s/api/v1.0/data/m2mgeneric_by_id" % self._baseurl,
+            params=data,
+            verify=self._verify,
+        )
+        return response.json()["data"][0]["%s.0" % sensor["tag"]]
 
 
 def get_auth_from_env():
@@ -292,31 +290,31 @@ def get_auth_from_env():
     :returns: A tuple like (host, port, user, pass, path)
     """
 
-    combined = os.getenv('MFI')
+    combined = os.getenv("MFI")
     if combined:
         # http://user:pass@192.168.1.1:7080/
         result = urlparse.urlparse(combined)
         netloc = result.netloc
-        if '@' in netloc:
-            creds, netloc = netloc.split('@', 1)
-            user, _pass = creds.split(':', 1)
+        if "@" in netloc:
+            creds, netloc = netloc.split("@", 1)
+            user, _pass = creds.split(":", 1)
         else:
-            user = 'mfiadmin'
-            _pass = 'password'
-        if ':' in netloc:
-            host, port = netloc.split(':', 1)
+            user = "mfiadmin"
+            _pass = "password"
+        if ":" in netloc:
+            host, port = netloc.split(":", 1)
             port = int(port)
         else:
             host = netloc
             port = 6080
         path = result.path
-        tls = combined.startswith('https://')
+        tls = combined.startswith("https://")
     else:
-        host = os.getenv('MFI_HOST')
-        port = int(os.getenv('MFI_PORT', 7080))
-        user = os.getenv('MFI_USER')
-        _pass = os.getenv('MFI_PASS')
-        path = '/'
+        host = os.getenv("MFI_HOST")
+        port = int(os.getenv("MFI_PORT", 7080))
+        user = os.getenv("MFI_USER")
+        _pass = os.getenv("MFI_PASS")
+        path = "/"
         tls = False
     return host, port, user, _pass, path, tls
 
