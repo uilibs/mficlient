@@ -3,6 +3,7 @@ name = "mficlient"
 version = "0.4.1"
 description = "A remote control client for Ubiquiti's UVC NVR"
 authors = ["Dan Smith <dsmith+mficlient@danplanet.com>"]
+license = "MIT"
 readme = "README.rst"
 repository = "https://github.com/uilibs/mficlient"
 classifiers = [
