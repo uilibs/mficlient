@@ -219,7 +219,7 @@ class MFiClient:
             "Output 12v": 12,
             "Output 24v": 24,
         }
-        voltage = state and voltages.get(the_port["model"], 0) or 0
+        voltage = (state and voltages.get(the_port["model"], 0)) or 0
 
         data = {
             "sId": ident,
