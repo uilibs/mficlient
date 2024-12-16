@@ -173,7 +173,7 @@ class Application:
 
         vals = [str(sensor.get(k, "")) for k in keys]
         vals.insert(0, rpt_time.strftime(TIME_FORMAT))
-        vals.append(wh_rpt_time and wh_rpt_time.strftime(TIME_FORMAT) or "")
+        vals.append((wh_rpt_time and wh_rpt_time.strftime(TIME_FORMAT)) or "")
         keys.insert(0, "time")
         keys.append("wh_rpt_time")
 
