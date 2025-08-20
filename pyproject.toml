@@ -137,3 +137,7 @@ select = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["mficlient", "tests"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
